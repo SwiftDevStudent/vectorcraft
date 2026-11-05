@@ -1,0 +1,20 @@
+VectorCraft Swift
+
+The native Swift implementation is licensed MIT OR Apache-2.0, as stated in
+LICENSE-MIT and LICENSE-APACHE in this directory.
+
+The workspace includes native PDF versions of VectorCraft's existing vector icons.
+Lucide-derived glyphs retain their ISC/Feather MIT license in
+Sources/VectorCraftMac/Resources/Icons/LICENSE-lucide.txt. Original dc-* glyphs
+remain MIT OR Apache-2.0. Source and derived paths are listed in ASSETS.md.
+
+Source Sans 3 Regular and Semibold are optional external build inputs, licensed
+under SIL Open Font License 1.1. Font binaries are not part of this source package;
+when supplied, their OFL text is included in the app alongside the fonts.
+SF Symbols are supplied by macOS.
+
+Naftali's local build may use the existing Vectorify app icon by explicit local-use
+permission. Its original creator and redistribution license remain unestablished;
+local permission does not authorize redistribution. The portable source export
+excludes those images and their local provenance files. External Apple device-frame
+assets likewise remain outside this source package and are never bundled.

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>CFBundleName</key><string>VectorCraft Swift</string>
+    <key>CFBundleDisplayName</key><string>VectorCraft Swift</string>
+    <key>CFBundleIdentifier</key><string>com.swiftdev.vectorcraft.mac</string>
+    <key>CFBundleExecutable</key><string>VectorCraftMac</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleIconFile</key><string>Vectorify</string>
+    <key>LSMinimumSystemVersion</key><string>27.0</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>CFBundleDocumentTypes</key><array><dict>
+        <key>CFBundleTypeName</key><string>VectorCraft Document</string>
+        <key>CFBundleTypeRole</key><string>Editor</string>
+        <key>LSHandlerRank</key><string>Alternate</string>
+        <key>LSItemContentTypes</key><array><string>com.swiftdev.vectorcraft.document</string><string>com.swiftdev.drawcraft.document</string></array>
+    </dict></array>
+    <key>UTExportedTypeDeclarations</key><array><dict>
+        <key>UTTypeIdentifier</key><string>com.swiftdev.vectorcraft.document</string>
+        <key>UTTypeDescription</key><string>VectorCraft Document</string>
+        <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+        <key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>vectorcraft</string></array></dict>
+    </dict><dict>
+        <key>UTTypeIdentifier</key><string>com.swiftdev.vectorcraft.screenshot-slot</string>
+        <key>UTTypeDescription</key><string>VectorCraft Screenshot Slot</string>
+        <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+    </dict></array>
+    <key>UTImportedTypeDeclarations</key><array><dict>
+        <key>UTTypeIdentifier</key><string>com.swiftdev.drawcraft.document</string>
+        <key>UTTypeDescription</key><string>DrawCraft Document</string>
+        <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+        <key>UTTypeTagSpecification</key><dict><key>public.filename-extension</key><array><string>drawcraft</string></array></dict>
+    </dict></array>
+</dict></plist>

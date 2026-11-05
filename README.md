@@ -233,6 +233,41 @@ VectorCraft is under active development. [**ROADMAP.md**](ROADMAP.md) has the st
 and what's next; [`docs/target-app-parity.md`](docs/target-app-parity.md) the full parity assessment and
 [`docs/gaps.md`](docs/gaps.md) the ranked list of what's missing.
 
+**Local Swift Mac preview (2026-11-04):** a separate native editor now lives in
+[`apple/`](apple/README.md), with drawing, node editing, inline point/rectangular area
+text, nine Pathfinder operations, editable compound paths, grid snapping/smart guides,
+transform modifiers/copying, Transform Again/Each and numeric Reflect/Shear, whole-group selection and nested group/layer isolation,
+draggable Tools/Properties palettes, native vector clipboard/paste placement, loaded-artboard
+fitting, queued native Save/Save As, editable SVG File/clipboard import, linear/radial gradient authoring
+and SVG/PNG/PDF export.
+Its workspace follows the Rust app's palette, fonts, tools and panels. Its [verification and limits](apple/VERIFICATION.md) are
+separate from the Rust feature scores below. [Swift Illustrator parity](apple/ILLUSTRATOR_PARITY.md)
+is the ongoing goal, with substantial gaps. Mac comes before iPhone.
+The baseline is now pinned to v0.21.0 (`11862f61`). Local source and Git metadata are
+preserved in a verified archive and recovery stash; ignored build/evidence files remain
+in place. Official Rust 0.21.0 writer → Swift reader/writer → Rust reopen checks pass
+for v1/v2 legacy, v3, v4 binary resources and compressed v4, preserving document/image bytes.
+The Swift port now has [self-contained upstream integration](apple/INTEGRATION.md),
+with private inputs separated, plus native PNG/TIFF clipboard paste and installed Undo/export proof. The current suite passes115 core,76 native Mac and4 CLI tests on Xcode27.3 (`27C5020n`).
+The October31 preview follow-up passed20 focused checks and the visual-layout/Undo
+follow-up passed14 distinct focused checks. The updated
+G2-signed screenshot-enabled release is installed and strictly verifies. Cold launch
+and installed native v4 screenshot editing/save/reopen/Undo/export now pass, including
+local frame access and multi-row reflow. Ten-slot screenshot rows, combined Duo
+output controls, top/bottom phone edge crops, explicit canvas clipping, smooth zoom
+and populated-only PNG/SVG/PDF batch export now have native workflow evidence.
+Rendered composition cards, multi-image placement, menu move/swap and clipped
+screenshot previews are implemented and verified. Native card/Finder drag acceptance,
+broader SVG/gradient acceptance and full Illustrator parity remain open. October31 adds deferred
+canvas decoding and display-sized image reuse for serial card rendering, with20 focused checks
+and installed card/text/Undo/Save proof. Repeated card rendering improved; first-pass proxy
+creation was slower in the bounded comparison. Total cold loading and broader budgets remain open. New Slots and selected Layout now
+provide five visual schematic choices; native default/apply/Undo/save/reopen/export pass,
+including repair of the selected-artboard state after Undo removes its last slot. Saved-document
+agent commands now include scene/font/resource summaries, stdin edits, dry runs and
+populated-only bulk export; screenshot preview performance has measured improvements.
+
+
 **Where we are (2026-10-10): alpha.** About 88% of core menu items, tools, effects and formats exist
 (92.5% of menu items do something), feature depth is ~75%, and we estimate ~65% ready for real work for a mainstream illustrator (~62% across all tracked features): everyday
 vector illustration is close to usable: drawing and path tools,

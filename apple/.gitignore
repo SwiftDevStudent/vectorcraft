@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+build/
+verification/
+local-build.env
+CORTEX_*.md
+Resources/Vectorify.icns
+Resources/VectorifyIcons/

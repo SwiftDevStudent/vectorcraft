@@ -36,6 +36,21 @@ Shippori Mincho, BIZ UDMincho, Noto Sans CJK SC and Noto Sans Arabic in the curr
 web builds BIZ UDPGothic Regular only) under the SIL
 Open Font License 1.1. Their license texts ship with the release packages as OFL-<family>.txt.
 
+Swift Mac port
+
+The native Swift implementation in apple/ is covered by the repository code licenses.
+The local Mac build uses Naftali’s existing Vectorify icon at his explicit request.
+The source project does not record its original creator or a redistribution license;
+see apple/Resources/VectorifyIcons/PROVENANCE.md. This local reuse permission does
+not establish publication or redistribution rights. No Adobe or Linearity assets
+are included. SF Symbols are supplied by macOS, and no font files are added.
+
+The Swift workspace uses native PDF versions of the Rust app's existing vector
+icons. Lucide-derived glyphs retain their ISC/Feather MIT license, copied into the
+Swift resource bundle as LICENSE-lucide.txt. VectorCraft's original dc-* glyphs
+remain MIT OR Apache-2.0. Source and derived paths are listed in ASSETS.md.
+The Swift workspace also reuses the existing Source Sans 3 Regular and Semibold
+UI fonts from assets/fonts; their existing OFL license ships with the Mac bundle.
 PDF import decodes CJK text with Adobe's CMap resources (https://github.com/adobe-type-tools/cmap-resources),
 compiled into the app through the hayro-cmap crate under the BSD 3-Clause License:
 

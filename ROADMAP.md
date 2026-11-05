@@ -1,5 +1,53 @@
 # VectorCraft Roadmap
 
+
+**Local Swift Mac preview (2026-11-04):** [`apple/`](apple/README.md) contains a
+separately installed native SwiftUI/AppKit editor for basic drawing, node editing,
+inline point/rectangular area text, nine Pathfinder operations and editable compound
+paths, transform modifiers/copying, Transform Again/Each and numeric Reflect/Shear,
+whole-group selection and nested group/layer isolation,
+grid snapping/smart guides, draggable Tools/Properties palettes, layers/groups,
+native vector clipboard and paste placement, loaded-artboard fitting, queued native
+Save/Save As, editable SVG File/clipboard import, linear/radial gradient authoring and SVG/PNG/PDF export. Its workspace
+matches the Rust app's palette, typography, tool strip, dock and panel rail. Focused tests
+and installed editing/save/reopen/export/resize checks pass; see its
+[verification record](apple/VERIFICATION.md). This is an initial port with substantial
+feature gaps tracked in the [Swift parity matrix](apple/ILLUSTRATOR_PARITY.md), not a
+reassessment of the Rust parity scores below. The full Swift Mac parity goal remains the target;
+Mac comes before iPhone.
+The baseline is now pinned to v0.21.0 (`11862f61`). Local source and Git metadata are
+preserved in a verified archive and recovery stash; ignored build/evidence files remain
+in place. Official Rust 0.21.0 writer → Swift reader/writer → Rust reopen checks pass
+for v1/v2 legacy, v3, v4 binary resources and compressed v4, preserving document/image bytes.
+The Swift port now has [self-contained upstream integration](apple/INTEGRATION.md),
+with private inputs separated, plus native PNG/TIFF clipboard paste and installed Undo/export proof. The current suite passes115 core,76 native Mac and4 CLI tests on Xcode27.3 (`27C5020n`).
+The October31 preview follow-up passed20 focused checks and the visual-layout/Undo
+follow-up passed14 distinct focused checks. The updated
+G2-signed screenshot-enabled release is installed and strictly verifies. Cold launch
+and installed native v4 screenshot editing/save/reopen/Undo/export now pass, including
+local frame access and multi-row reflow. Ten-slot screenshot rows, combined Duo
+output controls, top/bottom phone edge crops, explicit canvas clipping, smooth zoom
+and populated-only PNG/SVG/PDF batch export now have native workflow evidence.
+Rendered composition cards, multi-image placement, menu move/swap and clipped
+screenshot previews are implemented and verified. Native card/Finder drag acceptance,
+broader SVG/gradient acceptance and full Illustrator parity remain open. October31 adds deferred
+canvas decoding and display-sized image reuse for serial card rendering, with20 focused checks
+and installed card/text/Undo/Save proof. Repeated card rendering improved; first-pass proxy
+creation was slower in the bounded comparison. Total cold loading and broader budgets remain open. New Slots and selected Layout now
+provide five visual schematic choices; native default/apply/Undo/save/reopen/export pass,
+including repair of the selected-artboard state after Undo removes its last slot.
+**Local Swift port history:**
+
+- **2026-10-31 layout gallery:** five original vector layout choices, shared geometry and native Undo selection repair;14 distinct focused checks and installed default/apply/Undo/Redo/reopen/export proof. Rust scores unchanged.
+
+- **2026-10-31 previews:** deferred canvas images and cached card rasters;20 focused checks, installed card/text/Undo/Save and unchanged original PNG verified. Repeated rendering improves; first-pass card creation remains a limitation. Rust scores unchanged.
+
+- **2026-10-30 checkpoint:** measured ImageIO preview reuse, warning/thumbnail reuse and structured agent CLI; 175 tests pass. Native cold reopen and 21 populated PNG exports verified; cold-load stalls and full Swift parity remain open. Rust scores unchanged.
+
+- **2026-10-29 visual screenshot flow:** composition thumbnails, multi-image placement, native menu move/swap with exact Undo/Redo and preview clipping; 167 tests pass. Installed drag acceptance remains open. Rust scores unchanged.
+- **2026-10-29 screenshot slots/navigation:** ten numbered slots per row, combined Duo output controls, phone-off-top/bottom layouts and populated-only batch export verified in the installed Swift app; canvas overlap reproduced/fixed and zoom transitions smoothed. Rust scores unchanged.
+- **Local Swift Mac preview:** native editor and compatible native file storage in `apple/`, with the Rust workspace appearance, inline point/rectangular area text, nine destructive Pathfinder operations, editable compound paths, transform modifiers/copying, Transform Again/Each, numeric Reflect/Shear, native vector clipboard/paste placement, loaded-artboard fitting, queued native Save/Save As, whole-group selection, nested group/layer isolation, grid snapping/smart guides and draggable/dockable palettes, verified locally and not published. Advanced source data is retained with disclosed preview limitations and blocked lossy exports. Rust milestones and scores remain unchanged.
+
 - PDF.R1: editable PDF import uses the shared reader, scans page content in windows, and rejects known incomplete input before returning a document.
 - PDF.W1: PDF export and print composition use the shared optional writer for configuration, metadata, font preparation and guarded finalization; drawing and output policy remain app-owned.
 
