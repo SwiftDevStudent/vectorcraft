@@ -137,6 +137,9 @@ pub struct Pending {
     /// The number of the paste's chain ([`Placing::chains`]).
     chain: Option<u64>,
     done: Receiver<Result<Read, String>>,
+    /// The automation roots in force when the read started, kept in force when it is placed: a
+    /// DXF placed against an artboard that changed meanwhile is read again then.
+    scope: ScopeHandle,
 }
 
 /// A read waiting for the thread that reads the files.
@@ -189,6 +192,10 @@ pub fn available(app: &VectorcraftApp) -> bool {
 /// checked here first, so a bad one is an error at once. When no thread could start, the file is
 /// placed at once → `file.place`'s reply.
 pub fn start(app: &mut VectorcraftApp, p: &Value, dropped: bool) -> Result<Value, String> {
+    // The edit the tool computes on another thread comes first: the object Replace swaps is the
+    // one selected after it.
+    let r = app.session.finish_tool_edit();
+    crate::canvas::apply_requests(app, r);
     let job = app.session.prepare_place(p).map_err(|e| e.to_string())?;
     let name = job.name();
     let started = spawn(app, name.clone(), name, dropped, move || job.read().map(|r| Read::Place(Box::new(r))).map_err(|e| e.to_string()))?;
@@ -318,6 +325,7 @@ fn spawn_labeled(
     let (tx, done) = channel();
     // The automation roots in force here are in force there.
     let scope = ScopeHandle::capture();
+    let completion = scope.clone();
     #[cfg(test)]
     let reading = app.placing.reading.clone();
     let job: Job = Box::new(move || {
@@ -352,7 +360,7 @@ fn spawn_labeled(
         let _ = reader.send(job);
         app.placing.reader = Some(reader);
     }
-    app.placing.pending.push(Pending { name, label: label.clone(), doc, dropped, paste: chain.is_some(), chain, done });
+    app.placing.pending.push(Pending { name, label: label.clone(), doc, dropped, paste: chain.is_some(), chain, done, scope: completion });
     let status = format!("{label}…");
     app.status(status.clone());
     Ok(Some(json!({ "background": true, "status": status })))
@@ -384,7 +392,7 @@ pub fn poll(app: &mut VectorcraftApp) {
         if app.ui.status == format!("{}…", p.label) {
             app.ui.status.clear();
         }
-        finish(app, &p, r);
+        p.scope.clone().run(|| finish(app, &p, r));
         if let Some(chain) = p.chain
             && app.placing.swatch_paste.as_ref().is_none_or(|waiting| waiting.chain != chain)
         {

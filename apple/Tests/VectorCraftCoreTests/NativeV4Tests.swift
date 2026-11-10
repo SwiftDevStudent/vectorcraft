@@ -10,6 +10,18 @@ import UniformTypeIdentifiers
 struct NativeV4Tests {
   private let marker = Data([10, 0, 86, 67, 66, 76, 79, 66, 83, 0])
 
+  @Test func savedV4RetainsTheGeneratorUsedForRustMigrations() throws {
+    var envelope = Drawing().envelope
+    envelope["version"] = .integer(4)
+    envelope["document"]["version"] = .integer(1)
+    envelope["generator"] = .string("VectorCraft 0.21.0")
+
+    let source = try NativeFormat.decode(JSONEncoder().encode(envelope))
+    let reopened = try NativeFormat.decode(NativeFormat.encode(source))
+    #expect(reopened.envelope["generator"] == envelope["generator"])
+    #expect(reopened.envelope["document"]["version"] == .integer(1))
+  }
+
   @Test func binaryResourcesAndUnknownFieldsSurviveNativeSaving() throws {
     let payload = Data((0..<12_000).map { UInt8(truncatingIfNeeded: $0) })
     var envelope = Drawing().envelope

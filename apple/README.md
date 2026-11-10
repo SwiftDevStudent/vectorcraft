@@ -5,10 +5,9 @@ The original Rust app remains at `/Applications/VectorCraft.app`. This is an ini
 Mac port; the Rust application's feature scores in the root roadmap do not describe it.
 iPhone implementation is deferred until the Mac phase is complete.
 
-The Rust reference baseline is pinned to **v0.21.0**, commit `11862f61`. The current
-suite passes **115 Core +76 native Mac +4 CLI tests** on Xcode27.3 (`27C5020n`).
-Native v1/v2 legacy, v3, v4 binary resources and gzip-v4 pass official Rust0.21
-writer → Swift reader/writer → Rust reopen checks. The G2-signed update is installed.
+The Swift branch uses the stable Rust **v0.23.0** baseline (`5d0e892e`). The
+[verification record](VERIFICATION.md) covers native compatibility and the prior
+G2-signed installation.
 PNG/TIFF clipboard input prepares images off the UI actor; installed PNG Paste,
 Save, exact Undo/Redo and PNG export pass. Native cold reopen and both CLI readers also reopen the saved result. Full parity stays open.
 

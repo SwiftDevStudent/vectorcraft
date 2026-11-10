@@ -4,6 +4,7 @@ use super::{
     holds_instance, holds_plugin_effect, images, kurbo, lru, mask_value, painted_items, plain_image, polygon_length, rects_overlap,
     shape_masked_image, single_plain_fill, text_geom_snapped, white_shape_mask,
 };
+use crate::kept_paths::{self, KeptPath};
 
 impl Renderer {
     /// Cached cull bounds of a node (containers union their cached children), symbol instances
@@ -28,10 +29,54 @@ impl Renderer {
                 }
                 acc
             }
-            _ => brush_fx::cull_bounds(symbols, a),
+            _ => self.kept_bounds(symbols, a).unwrap_or_else(|| brush_fx::cull_bounds(symbols, a)),
         };
         self.geom.insert(key, GeomEntry { node: a.clone(), bounds: b, path: None, stamp: self.stamp });
         b
+    }
+
+    /// The kept path of long path or compound path `a` ([`KeptPath`]), made, or brought up to date
+    /// from the one kept for its id, when it is not `a`'s yet. `None` when `a` has none.
+    fn kept_path(&mut self, a: &Arc<Node>) -> Option<&mut KeptPath> {
+        if !kept_paths::kept(a) {
+            return None;
+        }
+        let stamp = self.stamp;
+        let made = match self.kept.get_mut(&a.id) {
+            Some(k) if Arc::ptr_eq(&k.node, a) => true,
+            Some(k) => {
+                // The object the path was made from, when no longer drawn, shares the path through
+                // its `geom` entry: dropping that entry lets the path change in place.
+                let old = Arc::as_ptr(&k.node) as usize;
+                if self.geom.get(&old).is_some_and(|e| Arc::ptr_eq(&e.node, &k.node) && e.stamp != stamp) {
+                    self.geom.remove(&old);
+                }
+                k.update(a)
+            }
+            None => false,
+        };
+        if !made {
+            let k = KeptPath::new(a, stamp)?;
+            self.kept.insert(a.id, k);
+        }
+        let k = self.kept.get_mut(&a.id)?;
+        k.stamp = stamp;
+        Some(k)
+    }
+
+    /// Cull bounds of long path or compound path `a` measured from its kept path
+    /// ([`Self::kept_path`]): the same as [`brush_fx::cull_bounds`]. `None` when it has no kept path
+    /// or is measured another way ([`brush_fx::path_cull_bounds`]).
+    fn kept_bounds(&mut self, symbols: &SymbolBoxes, a: &Arc<Node>) -> Option<Option<Rect>> {
+        let k = self.kept_path(a)?;
+        brush_fx::path_cull_bounds(symbols, a, || {
+            let b = k.geometric()?;
+            let bp = k.path.clone();
+            Some(a.appearance.stroked_bounds_by(b, |s| {
+                let tips = k.tips(s);
+                s.bounds_with_tips(&bp, b, tips)
+            }))
+        })
     }
 
     /// Drop the cached bounds of symbol instances and of the objects that hold them when `doc`'s
@@ -53,15 +98,28 @@ impl Renderer {
     /// objects with a plug-in effect. Rasters of raster effects and evaluations of live objects hold
     /// the revision in their keys when what they draw has a plug-in effect (`fx::Inputs`,
     /// `live::resources_key`).
-    pub(crate) fn check_plugins(&mut self) {
+    ///
+    /// The same caches are dropped when a live-effect plug-in that paints its pieces is installed
+    /// and the names of `doc`'s swatches or patterns have changed since the last check: whether its
+    /// pieces are used depends on those names.
+    pub(crate) fn check_plugins(&mut self, doc: &Document) {
         let revision = effects::plugin_revision();
-        if revision == self.plugin_revision {
-            return;
+        let mut stale = false;
+        if revision != self.plugin_revision {
+            self.plugin_revision = revision;
+            self.painting_plugins = effects::any_plugin_paints_output();
+            stale = true;
         }
-        self.plugin_revision = revision;
-        self.fx_geom.retain(|_, e| !effects::has_plugin_effect(&e.node));
-        self.geom.retain(|_, e| !holds_plugin_effect(&e.node) && !holds_instance(&e.node));
-        self.fx_arts.retain(|(node, ..)| !effects::has_plugin_effect(node));
+        if self.painting_plugins {
+            let names = fx::paint_names(doc);
+            stale |= names != self.paint_names;
+            self.paint_names = names;
+        }
+        if stale {
+            self.fx_geom.retain(|_, e| !effects::has_plugin_effect(&e.node));
+            self.geom.retain(|_, e| !holds_plugin_effect(&e.node) && !holds_instance(&e.node));
+            self.fx_arts.retain(|(node, ..)| !effects::has_plugin_effect(node));
+        }
     }
 
     /// Cached region a clip group's clipping path `a` clips to ([`effects::clip_outline`]):
@@ -105,7 +163,10 @@ impl Renderer {
         {
             return Some(p.clone());
         }
-        let p = Arc::new(a.stroke_path()?);
+        let p = match self.kept_path(a) {
+            Some(k) => k.path.clone(),
+            None => Arc::new(a.stroke_path()?),
+        };
         let bounds = self.bounds_of(symbols, a);
         self.geom.insert(key, GeomEntry { node: a.clone(), bounds, path: Some(p.clone()), stamp: self.stamp });
         Some(p)
@@ -114,7 +175,16 @@ impl Renderer {
     /// The cached path of path or compound path `n` ([`Self::path_of`]) when the frame is in
     /// Outline view and `n` is `fx_owner`, else `None`.
     fn outline_path(&mut self, f: &Frame, n: &Node) -> Option<Arc<BezPath>> {
-        let owner = self.fx_owner.as_ref().filter(|o| f.opts.outline && std::ptr::eq(&***o, n)).cloned()?;
+        if !f.opts.outline {
+            return None;
+        }
+        self.owner_path(f, n)
+    }
+
+    /// The cached path of path or compound path `n` ([`Self::path_of`]) when `n` is `fx_owner`,
+    /// else `None`.
+    fn owner_path(&mut self, f: &Frame, n: &Node) -> Option<Arc<BezPath>> {
+        let owner = self.fx_owner.as_ref().filter(|o| std::ptr::eq(&***o, n)).cloned()?;
         self.path_of(f.symbols, &owner)
     }
 
@@ -161,7 +231,7 @@ impl Renderer {
             && let Some(region) = self.clip_of(&m.art)
             && shape_masked_image(a, im, &region.0)
         {
-            self.draw_image_in(ctx, f, im, Some(&region), images::image_tint(a, f.ink), a.extras().pixelated);
+            self.draw_image_in(ctx, f, im, Some(&region), images::image_tint(f.doc, a, f.ink), a.extras().pixelated);
             self.stats.drawn += 1;
             return;
         }
@@ -429,7 +499,7 @@ impl Renderer {
                         && let NodeKind::Image(im) = &image.kind
                         && plain_image(image, im, &region.0)
                     {
-                        self.draw_image_in(ctx, f, im, Some(&region), images::image_tint(image, f.ink), image.extras().pixelated);
+                        self.draw_image_in(ctx, f, im, Some(&region), images::image_tint(f.doc, image, f.ink), image.extras().pixelated);
                         self.stats.drawn += 1;
                         return;
                     }
@@ -470,20 +540,16 @@ impl Renderer {
                     self.draw_shape(ctx, f, n, &bp, *rule);
                 }
             }
-            NodeKind::Compound { children, rule } => {
-                if let Some(bp) = self.outline_path(f, n) {
-                    return self.draw_shape(ctx, f, n, &bp, *rule);
+            NodeKind::Compound { rule, .. } => {
+                // Its members assembled once and kept with the node in `geom`, as plain paths are
+                // (`path_of`): a compound path of thousands of members is not assembled again in
+                // every frame.
+                if let Some(bp) = self.owner_path(f, n).or_else(|| n.stroke_path().map(Arc::new)) {
+                    self.draw_shape(ctx, f, n, &bp, *rule);
                 }
-                let mut bp = BezPath::new();
-                for c in children {
-                    if let Some(p) = c.path_data() {
-                        bp.extend(p.to_bezpath());
-                    }
-                }
-                self.draw_shape(ctx, f, n, &bp, *rule);
             }
             NodeKind::Text(t) => self.draw_text(ctx, f, n, t),
-            NodeKind::Image(im) => self.draw_image_in(ctx, f, im, None, images::image_tint(n, f.ink), n.extras().pixelated),
+            NodeKind::Image(im) => self.draw_image_in(ctx, f, im, None, images::image_tint(f.doc, n, f.ink), n.extras().pixelated),
             NodeKind::SymbolInstance { symbol, xf } => {
                 if let Some(sym) = f.doc.symbols.iter().find(|s| &s.name == symbol) {
                     // The instance draws when the frame has room for its art's objects; a symbol

@@ -1166,6 +1166,46 @@ fn a_replace_whose_object_was_deleted_meanwhile_places_nothing() {
     assert!(state(&app) == cleared, "nothing placed");
 }
 
+/// A Replace started while a Shape Builder merge is computed on another thread swaps the object
+/// as the merge leaves it: the merge is applied first.
+#[test]
+fn a_replace_during_a_merge_on_another_thread_swaps_the_merged_object() {
+    use vectorcraft_tools::{Mods, PointerEvent, PointerKind};
+    let path = saved("replace-merge", "photo.tif", &picture(Tiff, 60, 40));
+    let mut app = app(true);
+    for k in 0..40 {
+        app.run("shape.rectangle", json!({"x": k * 10, "y": 0, "width": 20, "height": 20})).unwrap();
+    }
+    app.run("select.all", json!({})).unwrap();
+    app.run("object.group", json!({})).unwrap();
+    app.run("tool.select", json!({"tool": "shapeBuilder"})).unwrap();
+    let view = app.view_info();
+    let at = |kind, x| PointerEvent {
+        kind,
+        pos: vectorcraft_geom::Point::new(x, 10.0),
+        mods: Mods::default(),
+        pressure: 1.0,
+        backquote: false,
+        pen: None,
+    };
+    crate::canvas::dispatch(&mut app, &at(PointerKind::Move, 5.0), view);
+    app.session.tool_poll(view, true).unwrap();
+    // A drag across the row merges every square into one object, the one Replace swaps.
+    for (kind, x) in [(PointerKind::Down, 5.0), (PointerKind::Drag, 200.0), (PointerKind::Drag, 405.0), (PointerKind::Up, 405.0)] {
+        crate::canvas::dispatch(&mut app, &at(kind, x), view);
+    }
+    assert!(app.session.tool_editing());
+    start(&mut app, &json!({"path": path, "replace": true}), false).unwrap();
+    assert!(!app.session.tool_editing(), "the merge is applied first");
+    placed(&mut app);
+    assert!(app.ui.status.is_empty(), "{}", app.ui.status);
+    let mut placed_names = vec![];
+    app.session.doc().unwrap().doc.walk(|n| placed_names.extend(n.name.clone()));
+    assert!(placed_names.iter().any(|n| n == "photo.tif"), "the merged art is replaced: {placed_names:?}");
+    let labels: Vec<String> = app.session.doc().unwrap().history.undo.iter().rev().take(2).map(|e| e.label.clone()).collect();
+    assert_eq!(labels.last().map(String::as_str), Some("Shape Builder"), "{labels:?}");
+}
+
 /// A file read while a dialog is open waits for the dialog to close, as a document that opens
 /// does (#1694): the dialog's OK acts on the active document.
 #[test]
@@ -1283,4 +1323,43 @@ fn a_file_read_between_a_tools_clicks_is_placed() {
         assert_eq!(names(&app), ["photo.tif"], "other document: {other_document}");
         assert_eq!(app.session.tool_busy(), !other_document, "other document: {other_document}");
     }
+}
+
+/// A DXF placed within automation roots is read again within them when it is placed against an
+/// artboard that changed meanwhile: a path redirected outside the roots after the read is refused.
+#[cfg(unix)]
+#[test]
+fn a_file_read_again_when_placed_stays_within_the_roots_it_was_read_in() {
+    let mut src = Session::new();
+    src.execute("file.new", &json!({"width": 100, "height": 50})).unwrap();
+    src.execute("shape.rectangle", &json!({"x": 5, "y": 5, "width": 20, "height": 10})).unwrap();
+    let v = src.execute("document.serialize", &json!({"format": "dxf"})).unwrap();
+    let dxf = vectorcraft_format::base64_decode(v["dataBase64"].as_str().unwrap()).unwrap();
+    let base = std::env::temp_dir().join(format!("vc-placing-reread-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    for d in ["in", "out"] {
+        std::fs::create_dir_all(base.join(d)).unwrap();
+        std::fs::write(base.join(d).join("real.dxf"), &dxf).unwrap();
+    }
+    let link = base.join("in").join("plan.dxf");
+    std::os::unix::fs::symlink(base.join("in").join("real.dxf"), &link).unwrap();
+    let roots = vectorcraft_engine::file_access::AutomationRoots::new(&[&base.join("in")], &[]).unwrap().unwrap();
+    let mut app = app(true);
+    let p = json!({"path": link.to_string_lossy(), "dxf": {"fit": true}, "at": [100, 150]});
+    vectorcraft_engine::file_access::confine(Some(&roots), || start(&mut app, &p, false)).unwrap();
+    let t0 = std::time::Instant::now();
+    while !(app.placing.reading[1].load(std::sync::atomic::Ordering::SeqCst) == 1
+        && app.placing.reading[0].load(std::sync::atomic::Ordering::SeqCst) == 0)
+    {
+        assert!(t0.elapsed().as_secs() < 60, "read within 60 s");
+        std::thread::yield_now();
+    }
+    // Read; now the path leads outside the roots and the artboard under `at` changes.
+    std::fs::remove_file(&link).unwrap();
+    std::os::unix::fs::symlink(base.join("out").join("real.dxf"), &link).unwrap();
+    app.run("artboard.setProps", json!({"index": 0, "width": 200})).unwrap();
+    placed(&mut app);
+    assert_eq!(app.session.doc().unwrap().doc.layers.iter().flat_map(|l| l.children().into_iter().flatten()).count(), 0, "nothing placed");
+    assert!(app.ui.status.contains("outside the read root"), "{}", app.ui.status);
+    let _ = std::fs::remove_dir_all(base);
 }

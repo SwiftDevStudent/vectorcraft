@@ -69,8 +69,10 @@ public enum NativeFormat {
   public static func encode(_ drawing: Drawing) throws -> Data {
     try drawing.validate()
     var envelope = drawing.envelope
-    // Preserve the loaded version and format name, including legacy anchors.
-    envelope["generator"] = .string("VectorCraft Swift 0.1")
+    // Rust uses the source generator to interpret legacy Twist angles.
+    if envelope["generator"] == .null {
+      envelope["generator"] = .string("VectorCraft Swift 0.1")
+    }
     // Carried previews and PDFs would describe the pre-edit document.
     envelope.remove("preview")
     envelope.remove("pdf")

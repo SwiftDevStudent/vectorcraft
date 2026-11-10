@@ -1,4 +1,21 @@
-# Current Swift Mac verification — 2026-11-04
+# Current Swift Mac verification — 2026-11-10
+
+## v0.23.0 source baseline and native compatibility — 2026-11-10
+
+The Swift branch merges stable Rust v0.23.0 (`5d0e892e`), preserving the earlier
+port commits. Local and fork `main` independently fast-forwarded to upstream
+`776e468e`.
+
+The official Rust 0.23.0 Mac CLI wrote v1, v2, v3, v4 and gzip-v4 fixtures with
+editable vector art, a Twist effect and an image. After a save by the Swift CLI,
+Rust reopened all five. The decoded document data, image bytes and the +37°
+Twist angle matched across the round trip.
+
+A separate Rust 0.21.0 v4 fixture reproduced a Twist sign flip on reopening a
+Swift save in Rust 0.23.0. Swift now retains the generator Rust uses to interpret
+the original angle. The fixture now reopens at +37° after a Swift save. All eight
+`NativeV4Tests` passed with Xcode 27.3 beta 1 (`27C5020n`). The source update was
+verified through the CLIs and did not replace either installed app.
 
 ## v0.21.0, bitmap Paste and portable upstream addition — 2026-11-04
 
